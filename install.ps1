@@ -1,7 +1,8 @@
 # E1 Assistant - Windows PowerShell Installer
-# One-liner: irm https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/install.ps1 | iex
+# One-liner: irm https://raw.githubusercontent.com/m3tokenized-hue/m3trad/main/install.ps1 | iex
 
 $ErrorActionPreference = "Stop"
+$repoUrl = "https://github.com/m3tokenized-hue/m3trad.git"
 
 Write-Host ""
 Write-Host "  ========================================" -ForegroundColor Cyan
@@ -41,7 +42,7 @@ if (Test-Path $installDir) {
     git pull
 } else {
     Write-Host "[INFO] Installing E1 Assistant to $installDir" -ForegroundColor Yellow
-    git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git $installDir
+    git clone $repoUrl $installDir
     Set-Location $installDir
 }
 
