@@ -445,8 +445,152 @@ async def get_available_models():
             {"provider": "openai", "model": "gpt-5.1", "name": "GPT-5.1", "recommended": True},
             {"provider": "openai", "model": "gpt-4o", "name": "GPT-4o"},
             {"provider": "openai", "model": "o3-mini", "name": "O3 Mini"},
+            {"provider": "moonshot", "model": "kimi-k2.5", "name": "Kimi K2.5", "recommended": True, "features": ["vision", "agent-swarm", "256k-context"]},
         ]
     }
+
+# ============= WALLET SETTINGS ENDPOINTS =============
+
+class WalletSettings(BaseModel):
+    exchange: str  # "binance" or "coinbase"
+    api_key: str
+    api_secret: Optional[str] = None
+    enabled: bool = True
+
+class WalletSettingsUpdate(BaseModel):
+    binance_api_key: Optional[str] = None
+    binance_api_secret: Optional[str] = None
+    coinbase_api_key: Optional[str] = None
+    coinbase_private_key: Optional[str] = None
+
+@api_router.get("/wallet-settings")
+async def get_wallet_settings():
+    """Get wallet connection settings (keys are masked)"""
+    settings = await db.wallet_settings.find_one({"id": "default"}, {"_id": 0})
+    if not settings:
+        return {
+            "id": "default",
+            "binance_connected": False,
+            "coinbase_connected": False
+        }
+    # Mask sensitive data
+    return {
+        "id": "default",
+        "binance_connected": bool(settings.get("binance_api_key")),
+        "binance_api_key_preview": settings.get("binance_api_key", "")[:8] + "..." if settings.get("binance_api_key") else None,
+        "coinbase_connected": bool(settings.get("coinbase_api_key")),
+        "coinbase_api_key_preview": settings.get("coinbase_api_key", "")[:8] + "..." if settings.get("coinbase_api_key") else None
+    }
+
+@api_router.put("/wallet-settings")
+async def update_wallet_settings(wallet_settings: WalletSettingsUpdate):
+    """Update wallet API keys"""
+    update_data = {k: v for k, v in wallet_settings.model_dump().items() if v is not None}
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.wallet_settings.update_one(
+        {"id": "default"},
+        {"$set": update_data},
+        upsert=True
+    )
+    logger.info("Wallet settings updated")
+    return await get_wallet_settings()
+
+@api_router.delete("/wallet-settings/{exchange}")
+async def disconnect_wallet(exchange: str):
+    """Disconnect a wallet by removing its API keys"""
+    if exchange == "binance":
+        await db.wallet_settings.update_one(
+            {"id": "default"},
+            {"$unset": {"binance_api_key": "", "binance_api_secret": ""}}
+        )
+    elif exchange == "coinbase":
+        await db.wallet_settings.update_one(
+            {"id": "default"},
+            {"$unset": {"coinbase_api_key": "", "coinbase_private_key": ""}}
+        )
+    else:
+        raise HTTPException(status_code=400, detail="Invalid exchange")
+    return {"status": "disconnected", "exchange": exchange}
+
+# ============= CRYPTO PRICE ENDPOINTS (CoinGecko) =============
+
+@api_router.get("/crypto/prices")
+async def get_crypto_prices():
+    """Get live crypto prices from CoinGecko (free API)"""
+    import aiohttp
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            # Get top cryptocurrencies
+            url = "https://api.coingecko.com/api/v3/coins/markets"
+            params = {
+                "vs_currency": "usd",
+                "order": "market_cap_desc",
+                "per_page": 20,
+                "page": 1,
+                "sparkline": False,
+                "price_change_percentage": "24h"
+            }
+            async with session.get(url, params=params) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    return {
+                        "prices": [
+                            {
+                                "id": coin["id"],
+                                "symbol": coin["symbol"].upper(),
+                                "name": coin["name"],
+                                "price": coin["current_price"],
+                                "change_24h": coin["price_change_percentage_24h"],
+                                "market_cap": coin["market_cap"],
+                                "volume": coin["total_volume"],
+                                "image": coin["image"]
+                            }
+                            for coin in data
+                        ],
+                        "updated_at": datetime.now(timezone.utc).isoformat()
+                    }
+                else:
+                    raise HTTPException(status_code=response.status, detail="CoinGecko API error")
+    except Exception as e:
+        logger.error(f"Failed to fetch crypto prices: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/crypto/price/{symbol}")
+async def get_crypto_price(symbol: str):
+    """Get price for a specific cryptocurrency"""
+    import aiohttp
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            url = f"https://api.coingecko.com/api/v3/simple/price"
+            params = {
+                "ids": symbol.lower(),
+                "vs_currencies": "usd",
+                "include_24hr_change": "true",
+                "include_market_cap": "true"
+            }
+            async with session.get(url, params=params) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if symbol.lower() in data:
+                        coin_data = data[symbol.lower()]
+                        return {
+                            "symbol": symbol.upper(),
+                            "price": coin_data.get("usd"),
+                            "change_24h": coin_data.get("usd_24h_change"),
+                            "market_cap": coin_data.get("usd_market_cap")
+                        }
+                    else:
+                        raise HTTPException(status_code=404, detail="Cryptocurrency not found")
+                else:
+                    raise HTTPException(status_code=response.status, detail="CoinGecko API error")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to fetch price for {symbol}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Include the router in the main app
 app.include_router(api_router)
