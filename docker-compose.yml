@@ -1,0 +1,59 @@
+# E1 Assistant - Docker Compose
+# Run with: docker-compose up -d
+
+version: '3.8'
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:7
+    container_name: e1-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - e1-network
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: e1-backend
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      - MONGO_URL=mongodb://mongodb:27017
+      - DB_NAME=e1_assistant
+      - CORS_ORIGINS=*
+      - EMERGENT_LLM_KEY=sk-emergent-b859d322fAdE833557
+    depends_on:
+      - mongodb
+    networks:
+      - e1-network
+
+  # Frontend UI
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: e1-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_BACKEND_URL=http://localhost:8001
+    depends_on:
+      - backend
+    networks:
+      - e1-network
+
+volumes:
+  mongodb_data:
+
+networks:
+  e1-network:
+    driver: bridge
