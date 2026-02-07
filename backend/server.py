@@ -527,9 +527,9 @@ async def get_crypto_prices():
             params = {
                 "vs_currency": "usd",
                 "order": "market_cap_desc",
-                "per_page": 20,
-                "page": 1,
-                "sparkline": False,
+                "per_page": "20",
+                "page": "1",
+                "sparkline": "false",
                 "price_change_percentage": "24h"
             }
             async with session.get(url, params=params) as response:
