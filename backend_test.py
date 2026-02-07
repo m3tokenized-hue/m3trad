@@ -374,6 +374,7 @@ class E1AssistantTester:
         
         # Test core endpoints
         models = self.test_models_endpoint()
+        self.test_kimi_model_availability()  # Test Kimi K2.5 model specifically
         conversation_id = self.test_chat_endpoint()
         self.test_conversations_endpoint(conversation_id)
         
@@ -382,6 +383,10 @@ class E1AssistantTester:
         self.test_swarm_agents_endpoint()
         self.test_swarm_tasks_endpoint()
         self.test_settings_endpoint()
+        
+        # Test new crypto and wallet features
+        self.test_crypto_prices_endpoint()
+        self.test_wallet_settings_endpoint()
         
         # Print summary
         print("=" * 60)
