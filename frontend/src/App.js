@@ -1187,6 +1187,9 @@ function App() {
   const [agents, setAgents] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [settings, setSettings] = useState({});
+  const [walletSettings, setWalletSettings] = useState({});
+  const [cryptoPrices, setCryptoPrices] = useState([]);
+  const [pricesLoading, setPricesLoading] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
 
   // Fetch initial data
@@ -1197,7 +1200,33 @@ function App() {
     fetchAgents();
     fetchTasks();
     fetchSettings();
+    fetchWalletSettings();
+    fetchCryptoPrices();
+    
+    // Refresh crypto prices every 60 seconds
+    const priceInterval = setInterval(fetchCryptoPrices, 60000);
+    return () => clearInterval(priceInterval);
   }, []);
+
+  const fetchCryptoPrices = async () => {
+    try {
+      const response = await axios.get(`${API}/crypto/prices`);
+      setCryptoPrices(response.data.prices);
+    } catch (error) {
+      console.error('Error fetching crypto prices:', error);
+    } finally {
+      setPricesLoading(false);
+    }
+  };
+
+  const fetchWalletSettings = async () => {
+    try {
+      const response = await axios.get(`${API}/wallet-settings`);
+      setWalletSettings(response.data);
+    } catch (error) {
+      console.error('Error fetching wallet settings:', error);
+    }
+  };
 
   const fetchModels = async () => {
     try {
