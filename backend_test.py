@@ -272,6 +272,97 @@ class E1AssistantTester:
         else:
             self.log_test("Settings Get", False, "Request failed", data)
 
+    def test_crypto_prices_endpoint(self):
+        """Test GET /api/crypto/prices endpoint"""
+        print("🔄 Fetching crypto prices (this may take a few seconds)...")
+        success, data = self.make_request('GET', '/crypto/prices')
+        
+        if success:
+            if isinstance(data, dict) and 'prices' in data:
+                prices = data['prices']
+                if isinstance(prices, list) and len(prices) > 0:
+                    # Check if we have expected crypto data
+                    first_coin = prices[0]
+                    required_fields = ['symbol', 'name', 'price', 'change_24h']
+                    has_required_fields = all(field in first_coin for field in required_fields)
+                    
+                    if has_required_fields:
+                        self.log_test("Crypto Prices Endpoint", True, 
+                                    f"Found {len(prices)} cryptocurrencies. First: {first_coin.get('symbol')} at ${first_coin.get('price')}")
+                    else:
+                        self.log_test("Crypto Prices Endpoint", False, 
+                                    f"Missing required fields in crypto data. Got: {list(first_coin.keys())}")
+                else:
+                    self.log_test("Crypto Prices Endpoint", False, "No crypto prices found in response", data)
+            else:
+                self.log_test("Crypto Prices Endpoint", False, "Invalid response format - missing 'prices' field", data)
+        else:
+            self.log_test("Crypto Prices Endpoint", False, "Request failed", data)
+
+    def test_wallet_settings_endpoint(self):
+        """Test wallet settings endpoints"""
+        # Test GET wallet settings
+        success, data = self.make_request('GET', '/wallet-settings')
+        
+        if success:
+            if isinstance(data, dict):
+                expected_fields = ['binance_connected', 'coinbase_connected']
+                has_expected_fields = all(field in data for field in expected_fields)
+                
+                if has_expected_fields:
+                    binance_status = "connected" if data.get('binance_connected') else "not connected"
+                    coinbase_status = "connected" if data.get('coinbase_connected') else "not connected"
+                    
+                    self.log_test("Wallet Settings Get", True, 
+                                f"Binance: {binance_status}, Coinbase: {coinbase_status}")
+                    
+                    # Test PUT wallet settings (update) - only if not already connected
+                    if not data.get('binance_connected'):
+                        test_wallet_data = {
+                            "binance_api_key": "test_api_key_12345",
+                            "binance_api_secret": "test_secret_67890"
+                        }
+                        
+                        success2, update_result = self.make_request('PUT', '/wallet-settings', test_wallet_data)
+                        if success2:
+                            self.log_test("Wallet Settings Update", True, "Test wallet settings updated successfully")
+                            
+                            # Clean up - disconnect the test wallet
+                            success3, _ = self.make_request('DELETE', '/wallet-settings/binance')
+                            if success3:
+                                self.log_test("Wallet Disconnect", True, "Test wallet disconnected successfully")
+                            else:
+                                self.log_test("Wallet Disconnect", False, "Failed to disconnect test wallet")
+                        else:
+                            self.log_test("Wallet Settings Update", False, "Failed to update wallet settings", update_result)
+                    else:
+                        self.log_test("Wallet Settings Update", True, "Skipped - Binance already connected")
+                else:
+                    self.log_test("Wallet Settings Get", False, 
+                                f"Missing expected fields. Got: {list(data.keys())}", data)
+            else:
+                self.log_test("Wallet Settings Get", False, "Invalid response format", data)
+        else:
+            self.log_test("Wallet Settings Get", False, "Request failed", data)
+
+    def test_kimi_model_availability(self):
+        """Test if Kimi K2.5 model is available in models list"""
+        success, data = self.make_request('GET', '/models')
+        
+        if success and isinstance(data, dict) and 'models' in data:
+            models = data['models']
+            kimi_models = [m for m in models if 'kimi' in m.get('model', '').lower() or 'kimi' in m.get('name', '').lower()]
+            
+            if kimi_models:
+                kimi_model = kimi_models[0]
+                self.log_test("Kimi K2.5 Model Availability", True, 
+                            f"Found Kimi model: {kimi_model.get('name')} ({kimi_model.get('model')})")
+            else:
+                self.log_test("Kimi K2.5 Model Availability", False, 
+                            "Kimi K2.5 model not found in models list")
+        else:
+            self.log_test("Kimi K2.5 Model Availability", False, "Could not fetch models list")
+
     def run_all_tests(self):
         """Run all backend API tests"""
         print("🚀 Starting E1 Assistant Backend API Tests")
