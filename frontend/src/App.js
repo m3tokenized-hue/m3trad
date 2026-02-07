@@ -1440,57 +1440,85 @@ function App() {
     }
   };
 
+  const handleUpdateWalletSettings = async (walletData) => {
+    try {
+      await axios.put(`${API}/wallet-settings`, walletData);
+      await fetchWalletSettings();
+      toast.success('Wallet connected successfully');
+    } catch (error) {
+      toast.error('Failed to connect wallet');
+    }
+  };
+
+  const handleDisconnectWallet = async (exchange) => {
+    try {
+      await axios.delete(`${API}/wallet-settings/${exchange}`);
+      await fetchWalletSettings();
+      toast.success(`${exchange} wallet disconnected`);
+    } catch (error) {
+      toast.error('Failed to disconnect wallet');
+    }
+  };
+
   return (
-    <div className="h-screen flex bg-background" data-testid="app-container">
+    <div className="h-screen flex flex-col bg-background" data-testid="app-container">
       <Toaster position="top-right" theme="dark" />
       
-      <Sidebar
-        conversations={conversations}
-        activeConversation={activeConversation}
-        onSelectConversation={handleSelectConversation}
-        onNewChat={handleNewChat}
-        onDeleteConversation={handleDeleteConversation}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-      />
-
-      {activeTab === 'chat' && (
-        <ChatInterface
-          conversation={activeConversation}
-          models={models}
-          selectedModel={selectedModel}
-          onSelectModel={setSelectedModel}
-          onSendMessage={handleSendMessage}
-          isLoading={isLoading}
+      {/* Crypto Price Ticker */}
+      <CryptoTicker prices={cryptoPrices} loading={pricesLoading} />
+      
+      <div className="flex-1 flex overflow-hidden">
+        <Sidebar
+          conversations={conversations}
+          activeConversation={activeConversation}
+          onSelectConversation={handleSelectConversation}
+          onNewChat={handleNewChat}
+          onDeleteConversation={handleDeleteConversation}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
         />
-      )}
 
-      {activeTab === 'integrations' && (
-        <IntegrationsPage
-          webhooks={webhooks}
-          onAddWebhook={handleAddWebhook}
-          onDeleteWebhook={handleDeleteWebhook}
-          onTestWebhook={handleTestWebhook}
-        />
-      )}
+        {activeTab === 'chat' && (
+          <ChatInterface
+            conversation={activeConversation}
+            models={models}
+            selectedModel={selectedModel}
+            onSelectModel={setSelectedModel}
+            onSendMessage={handleSendMessage}
+            isLoading={isLoading}
+          />
+        )}
 
-      {activeTab === 'swarm' && (
-        <SwarmPage
-          agents={agents}
-          tasks={tasks}
-          onAddAgent={handleAddAgent}
-          onDeleteAgent={handleDeleteAgent}
-          onCreateTask={handleCreateTask}
-        />
-      )}
+        {activeTab === 'integrations' && (
+          <IntegrationsPage
+            webhooks={webhooks}
+            onAddWebhook={handleAddWebhook}
+            onDeleteWebhook={handleDeleteWebhook}
+            onTestWebhook={handleTestWebhook}
+          />
+        )}
 
-      {activeTab === 'settings' && (
-        <SettingsPage
-          settings={settings}
-          models={models}
-          onUpdateSettings={handleUpdateSettings}
-        />
-      )}
+        {activeTab === 'swarm' && (
+          <SwarmPage
+            agents={agents}
+            tasks={tasks}
+            onAddAgent={handleAddAgent}
+            onDeleteAgent={handleDeleteAgent}
+            onCreateTask={handleCreateTask}
+          />
+        )}
+
+        {activeTab === 'settings' && (
+          <SettingsPage
+            settings={settings}
+            models={models}
+            walletSettings={walletSettings}
+            onUpdateSettings={handleUpdateSettings}
+            onUpdateWalletSettings={handleUpdateWalletSettings}
+            onDisconnectWallet={handleDisconnectWallet}
+          />
+        )}
+      </div>
     </div>
   );
 }
