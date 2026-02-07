@@ -20,7 +20,7 @@ Personal AI Assistant with multi-model support, crypto trading swarm agents, and
 ### One-Line Install (PowerShell)
 
 ```powershell
-irm https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/m3tokenized-hue/m3trad/main/install.ps1 | iex
 ```
 
 ### Prerequisites
