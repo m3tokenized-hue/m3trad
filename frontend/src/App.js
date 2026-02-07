@@ -39,7 +39,7 @@ const API = `${BACKEND_URL}/api`;
 const CryptoTicker = ({ prices, loading }) => {
   if (loading) {
     return (
-      <div className="bg-surface border-b border-border px-4 py-2">
+      <div className="bg-surface border-b border-border px-4 py-2" data-testid="crypto-ticker">
         <div className="flex items-center gap-2 text-muted-foreground text-sm">
           <RefreshCw className="w-3 h-3 animate-spin" />
           Loading prices...
@@ -48,7 +48,16 @@ const CryptoTicker = ({ prices, loading }) => {
     );
   }
 
-  if (!prices || prices.length === 0) return null;
+  if (!prices || prices.length === 0) {
+    return (
+      <div className="bg-surface border-b border-border px-4 py-2" data-testid="crypto-ticker">
+        <div className="flex items-center gap-2 text-muted-foreground text-sm">
+          <AlertCircle className="w-3 h-3 text-yellow-500" />
+          Crypto prices temporarily unavailable
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-surface border-b border-border overflow-hidden" data-testid="crypto-ticker">
