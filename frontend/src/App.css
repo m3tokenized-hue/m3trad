@@ -7,3 +7,9 @@
 #root {
   min-height: 100vh;
 }
+
+/* Move Emergent badge to left side to avoid chat interference */
+#emergent-badge {
+  left: 16px !important;
+  right: auto !important;
+}
