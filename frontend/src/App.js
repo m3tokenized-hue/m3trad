@@ -910,8 +910,17 @@ const SwarmPage = ({ agents, tasks, onAddAgent, onDeleteAgent, onCreateTask }) =
 };
 
 // ============= SETTINGS PAGE COMPONENT =============
-const SettingsPage = ({ settings, models, onUpdateSettings }) => {
+const SettingsPage = ({ settings, models, walletSettings, onUpdateSettings, onUpdateWalletSettings, onDisconnectWallet }) => {
   const [formData, setFormData] = useState(settings);
+  const [walletForm, setWalletForm] = useState({
+    binance_api_key: '',
+    binance_api_secret: '',
+    coinbase_api_key: '',
+    coinbase_private_key: ''
+  });
+  const [showBinanceKey, setShowBinanceKey] = useState(false);
+  const [showCoinbaseKey, setShowCoinbaseKey] = useState(false);
+  const [savingWallet, setSavingWallet] = useState(false);
 
   useEffect(() => {
     setFormData(settings);
@@ -921,41 +930,214 @@ const SettingsPage = ({ settings, models, onUpdateSettings }) => {
     onUpdateSettings(formData);
   };
 
+  const handleSaveWallet = async (exchange) => {
+    setSavingWallet(true);
+    try {
+      if (exchange === 'binance') {
+        await onUpdateWalletSettings({
+          binance_api_key: walletForm.binance_api_key,
+          binance_api_secret: walletForm.binance_api_secret
+        });
+        setWalletForm(prev => ({ ...prev, binance_api_key: '', binance_api_secret: '' }));
+      } else {
+        await onUpdateWalletSettings({
+          coinbase_api_key: walletForm.coinbase_api_key,
+          coinbase_private_key: walletForm.coinbase_private_key
+        });
+        setWalletForm(prev => ({ ...prev, coinbase_api_key: '', coinbase_private_key: '' }));
+      }
+    } finally {
+      setSavingWallet(false);
+    }
+  };
+
   return (
     <div className="flex-1 p-6 overflow-y-auto" data-testid="settings-page">
-      <div className="max-w-2xl mx-auto">
-        <h1 className="font-heading font-semibold text-2xl mb-6">Settings</h1>
+      <div className="max-w-2xl mx-auto space-y-8">
+        <h1 className="font-heading font-semibold text-2xl">Settings</h1>
 
-        <div className="bg-surface border border-border rounded-sm p-6 space-y-6">
+        {/* Wallet Connections */}
+        <div className="bg-surface border border-border rounded-sm p-6">
+          <div className="flex items-center gap-2 mb-6">
+            <Wallet className="w-5 h-5 text-primary" />
+            <h3 className="font-heading font-medium text-lg">Exchange Wallets</h3>
+          </div>
+
+          {/* Binance */}
+          <div className="mb-6 pb-6 border-b border-border">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-sm bg-yellow-500/10 flex items-center justify-center">
+                  <span className="font-bold text-yellow-500">B</span>
+                </div>
+                <div>
+                  <h4 className="font-medium">Binance</h4>
+                  <p className="text-xs text-muted-foreground">
+                    {walletSettings?.binance_connected 
+                      ? `Connected: ${walletSettings.binance_api_key_preview}` 
+                      : 'Not connected'}
+                  </p>
+                </div>
+              </div>
+              {walletSettings?.binance_connected && (
+                <button
+                  data-testid="disconnect-binance-btn"
+                  onClick={() => onDisconnectWallet('binance')}
+                  className="flex items-center gap-1 text-sm text-destructive hover:underline"
+                >
+                  <Unlink className="w-3 h-3" /> Disconnect
+                </button>
+              )}
+            </div>
+            
+            {!walletSettings?.binance_connected && (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm text-muted-foreground mb-1">API Key</label>
+                  <div className="relative">
+                    <input
+                      data-testid="binance-api-key-input"
+                      type={showBinanceKey ? "text" : "password"}
+                      value={walletForm.binance_api_key}
+                      onChange={(e) => setWalletForm({ ...walletForm, binance_api_key: e.target.value })}
+                      placeholder="Enter Binance API Key"
+                      className="w-full bg-surface-highlight border border-border rounded-sm px-3 py-2 pr-10 focus:outline-none focus:border-primary"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowBinanceKey(!showBinanceKey)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    >
+                      {showBinanceKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm text-muted-foreground mb-1">API Secret</label>
+                  <input
+                    data-testid="binance-api-secret-input"
+                    type="password"
+                    value={walletForm.binance_api_secret}
+                    onChange={(e) => setWalletForm({ ...walletForm, binance_api_secret: e.target.value })}
+                    placeholder="Enter Binance API Secret"
+                    className="w-full bg-surface-highlight border border-border rounded-sm px-3 py-2 focus:outline-none focus:border-primary"
+                  />
+                </div>
+                <button
+                  data-testid="save-binance-btn"
+                  onClick={() => handleSaveWallet('binance')}
+                  disabled={!walletForm.binance_api_key || !walletForm.binance_api_secret || savingWallet}
+                  className="px-4 py-2 bg-yellow-500 text-black rounded-sm hover:bg-yellow-400 disabled:opacity-50 text-sm font-medium"
+                >
+                  {savingWallet ? 'Connecting...' : 'Connect Binance'}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Coinbase */}
           <div>
-            <h3 className="font-medium mb-4">Default Model</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm text-muted-foreground mb-1">Provider</label>
-                <select
-                  data-testid="settings-provider-select"
-                  value={formData.default_provider || 'anthropic'}
-                  onChange={(e) => setFormData({ ...formData, default_provider: e.target.value })}
-                  className="w-full bg-surface-highlight border border-border rounded-sm px-3 py-2 focus:outline-none focus:border-primary"
-                >
-                  <option value="anthropic">Anthropic</option>
-                  <option value="gemini">Gemini</option>
-                  <option value="openai">OpenAI</option>
-                </select>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-sm bg-blue-500/10 flex items-center justify-center">
+                  <span className="font-bold text-blue-500">C</span>
+                </div>
+                <div>
+                  <h4 className="font-medium">Coinbase</h4>
+                  <p className="text-xs text-muted-foreground">
+                    {walletSettings?.coinbase_connected 
+                      ? `Connected: ${walletSettings.coinbase_api_key_preview}` 
+                      : 'Not connected'}
+                  </p>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm text-muted-foreground mb-1">Model</label>
-                <select
-                  data-testid="settings-model-select"
-                  value={formData.default_model || 'claude-sonnet-4-5-20250929'}
-                  onChange={(e) => setFormData({ ...formData, default_model: e.target.value })}
-                  className="w-full bg-surface-highlight border border-border rounded-sm px-3 py-2 focus:outline-none focus:border-primary"
+              {walletSettings?.coinbase_connected && (
+                <button
+                  data-testid="disconnect-coinbase-btn"
+                  onClick={() => onDisconnectWallet('coinbase')}
+                  className="flex items-center gap-1 text-sm text-destructive hover:underline"
                 >
-                  {models.map(m => (
-                    <option key={m.model} value={m.model}>{m.name}</option>
-                  ))}
-                </select>
+                  <Unlink className="w-3 h-3" /> Disconnect
+                </button>
+              )}
+            </div>
+            
+            {!walletSettings?.coinbase_connected && (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm text-muted-foreground mb-1">API Key</label>
+                  <div className="relative">
+                    <input
+                      data-testid="coinbase-api-key-input"
+                      type={showCoinbaseKey ? "text" : "password"}
+                      value={walletForm.coinbase_api_key}
+                      onChange={(e) => setWalletForm({ ...walletForm, coinbase_api_key: e.target.value })}
+                      placeholder="organizations/org-id/apiKeys/key-id"
+                      className="w-full bg-surface-highlight border border-border rounded-sm px-3 py-2 pr-10 focus:outline-none focus:border-primary"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCoinbaseKey(!showCoinbaseKey)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    >
+                      {showCoinbaseKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm text-muted-foreground mb-1">Private Key</label>
+                  <textarea
+                    data-testid="coinbase-private-key-input"
+                    value={walletForm.coinbase_private_key}
+                    onChange={(e) => setWalletForm({ ...walletForm, coinbase_private_key: e.target.value })}
+                    placeholder="-----BEGIN EC PRIVATE KEY-----..."
+                    className="w-full bg-surface-highlight border border-border rounded-sm px-3 py-2 focus:outline-none focus:border-primary font-mono text-xs"
+                    rows="3"
+                  />
+                </div>
+                <button
+                  data-testid="save-coinbase-btn"
+                  onClick={() => handleSaveWallet('coinbase')}
+                  disabled={!walletForm.coinbase_api_key || !walletForm.coinbase_private_key || savingWallet}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-sm hover:bg-blue-400 disabled:opacity-50 text-sm font-medium"
+                >
+                  {savingWallet ? 'Connecting...' : 'Connect Coinbase'}
+                </button>
               </div>
+            )}
+          </div>
+        </div>
+
+        {/* Model Settings */}
+        <div className="bg-surface border border-border rounded-sm p-6 space-y-6">
+          <h3 className="font-heading font-medium">Default Model</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm text-muted-foreground mb-1">Provider</label>
+              <select
+                data-testid="settings-provider-select"
+                value={formData.default_provider || 'anthropic'}
+                onChange={(e) => setFormData({ ...formData, default_provider: e.target.value })}
+                className="w-full bg-surface-highlight border border-border rounded-sm px-3 py-2 focus:outline-none focus:border-primary"
+              >
+                <option value="anthropic">Anthropic</option>
+                <option value="gemini">Gemini</option>
+                <option value="openai">OpenAI</option>
+                <option value="moonshot">Moonshot (Kimi)</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm text-muted-foreground mb-1">Model</label>
+              <select
+                data-testid="settings-model-select"
+                value={formData.default_model || 'claude-sonnet-4-5-20250929'}
+                onChange={(e) => setFormData({ ...formData, default_model: e.target.value })}
+                className="w-full bg-surface-highlight border border-border rounded-sm px-3 py-2 focus:outline-none focus:border-primary"
+              >
+                {models.map(m => (
+                  <option key={m.model} value={m.model}>{m.name}</option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -980,12 +1162,13 @@ const SettingsPage = ({ settings, models, onUpdateSettings }) => {
           </button>
         </div>
 
-        <div className="mt-8 bg-surface border border-border rounded-sm p-6">
+        {/* About */}
+        <div className="bg-surface border border-border rounded-sm p-6">
           <h3 className="font-medium mb-4">About</h3>
           <div className="text-sm text-muted-foreground space-y-2">
             <p><strong>E1 Assistant</strong> - Personal AI Assistant</p>
-            <p>Multi-model support with persistent memory, app integrations, and swarm agent capabilities.</p>
-            <p className="font-mono text-xs">Powered by Emergent LLM Key</p>
+            <p>Multi-model support with persistent memory, app integrations, swarm agents, and crypto trading capabilities.</p>
+            <p className="font-mono text-xs">Powered by Emergent LLM Key • Kimi K2.5 Agent Swarm Ready</p>
           </div>
         </div>
       </div>
