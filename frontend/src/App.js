@@ -21,11 +21,56 @@ import {
   Pause,
   MoreVertical,
   Link2,
-  Copy
+  Copy,
+  TrendingUp,
+  TrendingDown,
+  Wallet,
+  DollarSign,
+  RefreshCw,
+  Eye,
+  EyeOff,
+  Unlink
 } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
+
+// ============= CRYPTO TICKER COMPONENT =============
+const CryptoTicker = ({ prices, loading }) => {
+  if (loading) {
+    return (
+      <div className="bg-surface border-b border-border px-4 py-2">
+        <div className="flex items-center gap-2 text-muted-foreground text-sm">
+          <RefreshCw className="w-3 h-3 animate-spin" />
+          Loading prices...
+        </div>
+      </div>
+    );
+  }
+
+  if (!prices || prices.length === 0) return null;
+
+  return (
+    <div className="bg-surface border-b border-border overflow-hidden" data-testid="crypto-ticker">
+      <div className="flex animate-scroll">
+        {[...prices, ...prices].map((coin, idx) => (
+          <div 
+            key={`${coin.symbol}-${idx}`}
+            className="flex items-center gap-3 px-4 py-2 border-r border-border min-w-fit"
+          >
+            <img src={coin.image} alt={coin.symbol} className="w-5 h-5 rounded-full" />
+            <span className="font-mono font-medium text-sm">{coin.symbol}</span>
+            <span className="font-mono text-sm">${coin.price?.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+            <span className={`flex items-center text-xs font-mono ${coin.change_24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              {coin.change_24h >= 0 ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />}
+              {coin.change_24h?.toFixed(2)}%
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+};
 
 // ============= SIDEBAR COMPONENT =============
 const Sidebar = ({ 
