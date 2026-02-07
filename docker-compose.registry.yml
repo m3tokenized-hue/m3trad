@@ -1,0 +1,50 @@
+# E1 Assistant - Docker Compose (Registry Pull Version)
+# This uses pre-built base images - just add your code as volumes
+
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: e1-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+  backend:
+    image: python:3.11-slim
+    container_name: e1-backend
+    restart: unless-stopped
+    working_dir: /app
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./backend:/app
+    environment:
+      - MONGO_URL=mongodb://mongodb:27017
+      - DB_NAME=e1_assistant
+      - CORS_ORIGINS=*
+      - EMERGENT_LLM_KEY=sk-emergent-b859d322fAdE833557
+    command: bash -c "pip install -r requirements.txt && uvicorn server:app --host 0.0.0.0 --port 8001"
+    depends_on:
+      - mongodb
+
+  frontend:
+    image: node:18-alpine
+    container_name: e1-frontend
+    restart: unless-stopped
+    working_dir: /app
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+    environment:
+      - REACT_APP_BACKEND_URL=http://localhost:8001
+    command: sh -c "npm install && npm start"
+    depends_on:
+      - backend
+
+volumes:
+  mongodb_data:
