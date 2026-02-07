@@ -302,7 +302,7 @@ const ChatInterface = ({
       </div>
 
       {/* Input */}
-      <form onSubmit={handleSubmit} className="p-4 border-t border-border">
+      <form onSubmit={handleSubmit} className="p-4 pb-16 border-t border-border">
         <div className="flex gap-2">
           <input
             data-testid="chat-input"
